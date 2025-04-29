@@ -9,25 +9,25 @@ Ce dépôt contient mon portfolio de projets personnels et professionnels dans l
 ### SwarmDrone
 Un système de contrôle collaboratif de drones pour la cartographie 3D autonome.
 - **Technologies**: ROS, Python, React.js, Three.js
-- [Voir le code source](https://github.com/antoninpicard/swarmdrone)
+- [Voir le code source](https://github.com/antoninpicard/Portefolio-Project/tree/main/Projects/SwarmDrone)
 - [Accéder à la démo](Projects/SwarmDrone/demo/index.html)
 
 ### QuantumSandbox
 Un simulateur basé sur navigateur pour les algorithmes et circuits quantiques.
 - **Technologies**: Qiskit, React.js, D3.js, WebAssembly
-- [Voir le code source](https://github.com/antoninpicard/quantum-sandbox)
+- [Voir le code source](https://github.com/antoninpicard/Portefolio-Project/tree/main/Projects/QuantumSandbox)
 - [Accéder à la démo](Projects/QuantumSandbox/demo/index.html)
 
 ### Assistant NLP
 Un assistant vocal hors ligne utilisant le Traitement du Langage Naturel qui fonctionne localement.
 - **Technologies**: Python, PyTorch, React Native, Transformers
-- [Voir le code source](https://github.com/antoninpicard/nlp-assistant)
+- [Voir le code source](https://github.com/antoninpicard/Portefolio-Project/tree/main/Projects/NLP-Assistant)
 - [Accéder à la démo](Projects/NLP-Assistant/demo/index.html)
 
 ### CyberGuard
 Une plateforme de cybersécurité open-source pour les réseaux domestiques.
 - **Technologies**: Python, TensorFlow, React.js, MongoDB
-- [Voir le code source](https://github.com/antoninpicard/cyberguard)
+- [Voir le code source](https://github.com/antoninpicard/Portefolio-Project/tree/main/Projects/CyberGuard)
 - [Accéder à la démo](Projects/CyberGuard/demo/index.html)
 
 ## 🛠️ Structure du projet
