@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberGuard – Démo interactive</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root{--primary:#0d6efd;--ok:#198754;--warn:#ffc107;--danger:#dc3545}
+    body{padding-top:56px;background:#f8f9fa;font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif}
+    .navbar{background:var(--primary)}
+    .device-card{width:110px;height:110px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;margin:6px;box-shadow:0 2px 4px rgba(0,0,0,.1);cursor:pointer;transition:transform .2s}
+    .device-card:hover{transform:translateY(-3px)}
+    .status-dot{width:16px;height:16px;border-radius:50%;margin-bottom:4px}
+    #logs{max-height:260px;overflow-y:auto}
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark fixed-top">
+ <div class="container"><a class="navbar-brand" href="../../../index.html"><i class="bi bi-shield-lock"></i> CyberGuard Demo</a></div>
+</nav>
+<div class="container mt-4">
+ <div class="row">
+  <div class="col-lg-8">
+   <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+     <h5 class="mb-0">Réseau domestique</h5>
+     <button id="scanBtn" class="btn btn-sm btn-primary"><i class="bi bi-wifi"></i> Scanner</button>
+    </div>
+    <div class="card-body p-2" id="deviceGrid" style="display:flex;flex-wrap:wrap"></div>
+   </div>
+  </div>
+  <div class="col-lg-4">
+   <div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">Alertes de sécurité</h5></div>
+    <div class="card-body p-0">
+     <table class="table table-sm mb-0">
+      <thead class="table-light"><tr><th>Heure</th><th>Appareil</th><th>Type</th></tr></thead>
+      <tbody id="logs"></tbody>
+     </table>
+    </div>
+   </div>
+   <div class="alert alert-info small">Cette démo exécute un <strong>scan simulé</strong> et génère aléatoirement des appareils et menaces pour illustrer l'interface temps réel de CyberGuard.</div>
+  </div>
+ </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+ const deviceGrid=document.getElementById('deviceGrid');
+ const logsBody=document.getElementById('logs');
+ const scanBtn=document.getElementById('scanBtn');
+ let deviceId=0;
+ function randomIp(){return Array.from({length:4},()=>Math.floor(Math.random()*256)).join('.');}
+ function logAlert(device,name,level){const tr=document.createElement('tr');tr.innerHTML=`<td>${new Date().toLocaleTimeString()}</td><td>${name}</td><td><span class="badge bg-${level}">${level}</span></td>`;logsBody.prepend(tr);}
+ function createDevice(){const card=document.createElement('div');card.className='device-card';const status=document.createElement('div');status.className='status-dot bg-success';const icon=document.createElement('i');icon.className='bi bi-laptop';const label=document.createElement('small');label.innerText=randomIp();card.append(status,icon,label);card.dataset.state='safe';card.addEventListener('click',()=>toggleState(card));deviceGrid.append(card);}
+ function toggleState(card){if(card.dataset.state==='safe'){card.dataset.state='warn';card.querySelector('.status-dot').className='status-dot bg-warning';logAlert(card,label='Appareil', 'warning');}else if(card.dataset.state==='warn'){card.dataset.state='danger';card.querySelector('.status-dot').className='status-dot bg-danger';logAlert(card,'Appareil','danger');}else{card.dataset.state='safe';card.querySelector('.status-dot').className='status-dot bg-success';}}
+ function simulateScan(){deviceGrid.innerHTML='';logsBody.innerHTML='';const count=Math.floor(Math.random()*8)+4;for(let i=0;i<count;i++){createDevice();if(Math.random()<0.3){setTimeout(()=>{const card=deviceGrid.children[i];card.dataset.state='warn';card.querySelector('.status-dot').className='status-dot bg-warning';logAlert(card,'Appareil','warning');if(Math.random()<0.4){setTimeout(()=>{card.dataset.state='danger';card.querySelector('.status-dot').className='status-dot bg-danger';logAlert(card,'Appareil','danger');},1500);} },1000);} }
+ }
+ scanBtn.addEventListener('click',simulateScan);
+ simulateScan();
+</script>
+</body>
+</html>

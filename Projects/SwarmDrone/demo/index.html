@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwarmDrone - Démo Interactive</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #ff5722;
+            --dark-color: #212121;
+            --light-color: #f5f5f5;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark-color);
+            background-color: var(--light-color);
+            padding-top: 56px;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+        }
+        
+        #simulation-canvas {
+            width: 100%;
+            height: 400px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .drone {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+        
+        .drone::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+        
+        .drone.leader {
+            background-color: var(--secondary-color);
+        }
+        
+        .drone.leader::before {
+            border-color: var(--secondary-color);
+        }
+        
+        .obstacle {
+            position: absolute;
+            background-color: #795548;
+            border-radius: 4px;
+            transform: translate(-50%, -50%);
+        }
+        
+        .control-panel {
+            padding: 1.5rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .formation-btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            border: 2px solid #e0e0e0;
+            background-color: white;
+            color: var(--dark-color);
+            transition: all 0.2s ease;
+        }
+        
+        .formation-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .path-line {
+            position: absolute;
+            height: 2px;
+            background-color: rgba(30, 136, 229, 0.3);
+            transform-origin: left center;
+            pointer-events: none;
+        }
+        
+        .alert-banner {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .destination {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px dashed var(--secondary-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .destination::before {
+            content: 'X';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--secondary-color);
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        
+        /* --- Améliorations visuelles et animations --- */
+        #simulation-canvas {
+            background-color: #e8f2ff;
+            background-image:
+                linear-gradient(0deg, transparent 24%, rgba(0,0,0,.05) 25%, rgba(0,0,0,.05) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.05) 75%, rgba(0,0,0,.05) 76%, transparent 77%),
+                linear-gradient(90deg, transparent 24%, rgba(0,0,0,.05) 25%, rgba(0,0,0,.05) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.05) 75%, rgba(0,0,0,.05) 76%, transparent 77%);
+            background-size: 50px 50px;
+        }
+        @media (min-width: 992px) {
+            #simulation-canvas { height: 500px; }
+        }
+
+        .drone {
+            box-shadow: 0 0 6px rgba(0, 0, 0, .2);
+        }
+        .drone::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border: 2px solid rgba(30, 136, 229, .4);
+            border-radius: 50%;
+            animation: pulse 2.5s infinite;
+            pointer-events: none;
+        }
+        .drone.leader::after {
+            border-color: rgba(255, 87, 34, .4);
+        }
+
+        @keyframes pulse {
+            0%   { transform: scale(.6); opacity: .8; }
+            70%  { transform: scale(1.6); opacity: 0; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
+        .destination {
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to   { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .path-line {
+            background-color: rgba(30, 136, 229, 0.5);
+            animation: fadeLine 1.6s ease-in-out infinite alternate;
+        }
+        @keyframes fadeLine {
+            0%   { opacity: .15; }
+            50%  { opacity: .5; }
+            100% { opacity: .15; }
+        }
+
+        .obstacle {
+            box-shadow: 0 0 10px rgba(0,0,0,.35);
+            /* Indicator du obstacle hitbox */
+            outline: 1px dashed rgba(121, 85, 72, 0.3);
+            outline-offset: 10px;
+        }
+        
+        .drone.avoiding {
+            background-color: #f44336 !important;
+            transition: background-color 0.2s ease;
+        }
+        
+        .direction-indicator {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            top: 3px;
+            left: 14px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        .path-trace {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background-color: rgba(30, 136, 229, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="../../../index.html">
+                <i class="bi bi-robot"></i> SwarmDrone Demo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../../../index.html">Retour à la page principale</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title text-center mb-4">Contrôle d'essaim de drones</h2>
+                        
+                        <div class="alert alert-info">
+                            <h5>Comment utiliser cette démo :</h5>
+                            <ol>
+                                <li>Cliquez sur le terrain pour définir la destination</li>
+                                <li>Sélectionnez une formation pour l'essaim de drones</li>
+                                <li>Ajustez la vitesse et l'espacement selon vos préférences</li>
+                                <li>Observez comment l'essaim évite les obstacles et maintient la formation</li>
+                            </ol>
+                        </div>
+                        
+                        <!-- Simulation area -->
+                        <div id="simulation-canvas" class="mb-4">
+                            <div class="map-overlay">
+                                Algorithme: <span id="algorithm-display">RRT*</span>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="control-panel">
+                                    <h5 class="mb-3">Formations</h5>
+                                    <button class="btn formation-btn active" data-formation="triangle">Triangle</button>
+                                    <button class="btn formation-btn" data-formation="line">Ligne</button>
+                                    <button class="btn formation-btn" data-formation="square">Carré</button>
+                                    <button class="btn formation-btn" data-formation="column">Colonne</button>
+                                    
+                                    <hr class="my-3">
+                                    
+                                    <h5 class="mb-3">Algorithme de planification</h5>
+                                    <select class="form-select mb-3" id="algorithm-select">
+                                        <option value="rrt">RRT*</option>
+                                        <option value="astar">A*</option>
+                                    </select>
+                                    
+                                    <button class="btn btn-primary w-100" id="reset-btn">Réinitialiser simulation</button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="control-panel">
+                                    <h5 class="mb-3">Paramètres</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="speed-range" class="form-label d-flex justify-content-between">
+                                            <span>Vitesse</span>
+                                            <span id="speed-value">50%</span>
+                                        </label>
+                                        <input type="range" class="form-range" id="speed-range" min="10" max="100" value="50">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="spacing-range" class="form-label d-flex justify-content-between">
+                                            <span>Espacement</span>
+                                            <span id="spacing-value">30px</span>
+                                        </label>
+                                        <input type="range" class="form-range" id="spacing-range" min="20" max="60" value="30">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="obstacle-toggle" class="form-label">Obstacles</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="obstacle-toggle" checked>
+                                            <label class="form-check-label" for="obstacle-toggle">Activer les obstacles</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">À propos de cette démo</h5>
+                        <p>Cette démonstration simule les capacités de contrôle d'essaim du projet SwarmDrone. Dans la version complète, le système permet :</p>
+                        <ul>
+                            <li>Contrôle en temps réel de véritables drones via ROS et MAVLink</li>
+                            <li>Cartographie 3D collaborative des environnements</li>
+                            <li>Évitement d'obstacles dynamiques basé sur la vision</li>
+                            <li>Missions autonomes avec adaptation aux changements environnementaux</li>
+                            <li>Interface de contrôle de mission en réalité augmentée</li>
+                        </ul>
+                        <div class="text-center">
+                            <a href="../../../index.html" class="btn btn-outline-primary">En savoir plus</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert-banner" id="alert-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const simulationCanvas = document.getElementById('simulation-canvas');
+            const formationButtons = document.querySelectorAll('.formation-btn');
+            const speedRange = document.getElementById('speed-range');
+            const speedValue = document.getElementById('speed-value');
+            const spacingRange = document.getElementById('spacing-range');
+            const spacingValue = document.getElementById('spacing-value');
+            const obstacleToggle = document.getElementById('obstacle-toggle');
+            const resetButton = document.getElementById('reset-btn');
+            const algorithmSelect = document.getElementById('algorithm-select');
+            const algorithmDisplay = document.getElementById('algorithm-display');
+            
+            // Simulation state
+            let drones = [];
+            let obstacles = [];
+            let destination = null;
+            let currentFormation = 'triangle';
+            let speed = 50;
+            let spacing = 30;
+            let animationFrame = null;
+            let algorithmType = 'rrt';
+            
+            // Initialize the simulation
+            function initializeSimulation() {
+                // Clear previous state
+                simulationCanvas.innerHTML = '';
+                drones = [];
+                
+                // Create drones
+                for (let i = 0; i < 5; i++) {
+                    const drone = document.createElement('div');
+                    drone.className = i === 0 ? 'drone leader' : 'drone';
+                    drone.style.left = '50px';
+                    drone.style.top = '200px';
+                    simulationCanvas.appendChild(drone);
+                    
+                    // Ajouter un petit indicateur de direction pour visualiser le mouvement
+                    const dirIndicator = document.createElement('div');
+                    dirIndicator.className = 'direction-indicator';
+                    drone.appendChild(dirIndicator);
+                    
+                    drones.push({
+                        element: drone,
+                        directionIndicator: dirIndicator,
+                        x: 50,
+                        y: 200,
+                        lastX: 50,
+                        lastY: 200,
+                        targetX: 50,
+                        targetY: 200,
+                        isLeader: i === 0,
+                        avoidanceSide: null, // Pour mémoriser le côté de contournement
+                        path: [] // Stocke les dernières positions pour visualiser la trajectoire
+                    });
+                }
+                
+                // Create obstacles if enabled
+                if (obstacleToggle.checked) {
+                    createObstacles();
+                }
+                
+                // Create initial destination
+                setDestination(300, 200);
+                
+                // Update formation
+                updateFormation();
+            }
+            
+            // Create obstacles
+            function createObstacles() {
+                obstacles = [];
+                
+                // Remove existing obstacles
+                document.querySelectorAll('.obstacle').forEach(el => el.remove());
+                
+                // Create new obstacles
+                const numObstacles = 5;
+                const canvasWidth = simulationCanvas.offsetWidth;
+                const canvasHeight = simulationCanvas.offsetHeight;
+                
+                for (let i = 0; i < numObstacles; i++) {
+                    const width = Math.floor(Math.random() * 40) + 20;
+                    const height = Math.floor(Math.random() * 40) + 20;
+                    const x = Math.floor(Math.random() * (canvasWidth - 100)) + 50;
+                    const y = Math.floor(Math.random() * (canvasHeight - 100)) + 50;
+                    
+                    // Avoid placing obstacles near starting position
+                    if (Math.sqrt(Math.pow(x - 50, 2) + Math.pow(y - 200, 2)) < 100) {
+                        i--; // Try again
+                        continue;
+                    }
+                    
+                    const obstacle = document.createElement('div');
+                    obstacle.className = 'obstacle';
+                    obstacle.style.width = `${width}px`;
+                    obstacle.style.height = `${height}px`;
+                    obstacle.style.left = `${x}px`;
+                    obstacle.style.top = `${y}px`;
+                    simulationCanvas.appendChild(obstacle);
+                    
+                    obstacles.push({
+                        element: obstacle,
+                        x,
+                        y,
+                        width,
+                        height
+                    });
+                }
+            }
+            
+            // Set destination point
+            function setDestination(x, y) {
+                // Remove previous destination
+                if (destination) {
+                    destination.element.remove();
+                }
+                
+                // Create new destination marker
+                const destElement = document.createElement('div');
+                destElement.className = 'destination';
+                destElement.style.left = `${x}px`;
+                destElement.style.top = `${y}px`;
+                simulationCanvas.appendChild(destElement);
+                
+                destination = {
+                    element: destElement,
+                    x,
+                    y
+                };
+                
+                // Set leader's target to the destination
+                if (drones.length > 0) {
+                    drones[0].targetX = x;
+                    drones[0].targetY = y;
+                }
+                
+                // Clear previous path lines
+                document.querySelectorAll('.path-line').forEach(el => el.remove());
+                
+                // Create path line from leader to destination
+                createPathLine(drones[0].x, drones[0].y, x, y);
+                
+                showAlert('Nouvelle destination définie', 'info');
+            }
+            
+            // Create a path line between two points
+            function createPathLine(x1, y1, x2, y2) {
+                const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+                
+                const line = document.createElement('div');
+                line.className = 'path-line';
+                line.style.width = `${length}px`;
+                line.style.left = `${x1}px`;
+                line.style.top = `${y1}px`;
+                line.style.transform = `rotate(${angle}deg)`;
+                
+                simulationCanvas.appendChild(line);
+                return line;
+            }
+            
+            // Update formation based on leader position
+            function updateFormation() {
+                if (drones.length < 2) return;
+                
+                const leader = drones[0];
+                const followers = drones.slice(1);
+                const formationSpacing = parseInt(spacingRange.value);
+                
+                // Calculate direction vector from leader to destination
+                let dx = destination.x - leader.x;
+                let dy = destination.y - leader.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    // Normalize direction vector
+                    dx /= dist;
+                    dy /= dist;
+                }
+                
+                // Calculate perpendicular vector
+                const perpX = -dy;
+                const perpY = dx;
+                
+                // Position followers based on formation
+                switch (currentFormation) {
+                    case 'triangle':
+                        // Triangle formation
+                        for (let i = 0; i < followers.length; i++) {
+                            const row = Math.floor(i / 2) + 1;
+                            const col = i % 2 === 0 ? -1 : 1;
+                            
+                            followers[i].targetX = leader.x - dx * row * formationSpacing + perpX * col * row * formationSpacing;
+                            followers[i].targetY = leader.y - dy * row * formationSpacing + perpY * col * row * formationSpacing;
+                        }
+                        break;
+                        
+                    case 'line':
+                        // Line formation (perpendicular to direction)
+                        for (let i = 0; i < followers.length; i++) {
+                            const offset = (i + 1) * formationSpacing * (i % 2 === 0 ? 1 : -1);
+                            followers[i].targetX = leader.x + perpX * offset;
+                            followers[i].targetY = leader.y + perpY * offset;
+                        }
+                        break;
+                        
+                    case 'square':
+                        // Square formation
+                        const positions = [
+                            { x: 1, y: 1 },
+                            { x: 1, y: -1 },
+                            { x: -1, y: 1 },
+                            { x: -1, y: -1 }
+                        ];
+                        
+                        for (let i = 0; i < followers.length; i++) {
+                            const pos = positions[i % positions.length];
+                            followers[i].targetX = leader.x + (perpX * pos.x + dx * pos.y) * formationSpacing;
+                            followers[i].targetY = leader.y + (perpY * pos.x + dy * pos.y) * formationSpacing;
+                        }
+                        break;
+                        
+                    case 'column':
+                        // Column formation (parallel to direction)
+                        for (let i = 0; i < followers.length; i++) {
+                            followers[i].targetX = leader.x - dx * (i + 1) * formationSpacing;
+                            followers[i].targetY = leader.y - dy * (i + 1) * formationSpacing;
+                        }
+                        break;
+                }
+            }
+            
+            // Check collision with obstacles
+            function checkCollision(drone, newX, newY) {
+                // Drone radius (half width)
+                const droneRadius = 20; // Augmenté pour une détection encore plus précoce des obstacles
+                
+                for (const obstacle of obstacles) {
+                    // Improved rectangular collision detection with larger buffer
+                    if (newX > obstacle.x - obstacle.width/2 - droneRadius &&
+                        newX < obstacle.x + obstacle.width/2 + droneRadius &&
+                        newY > obstacle.y - obstacle.height/2 - droneRadius &&
+                        newY < obstacle.y + obstacle.height/2 + droneRadius) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // Algorithme avancé d'évitement d'obstacles utilisant un champ de potentiel
+            function findPathAroundObstacle(drone, targetX, targetY) {
+                // Paramètres du champ de potentiel
+                const targetAttraction = 0.7;       // Force d'attraction réduite pour favoriser le contournement
+                const obstacleRepulsion = 4.0;      // Force de répulsion fortement augmentée pour passer plus loin
+                const maxInfluenceDistance = 180;   // Distance d'influence très augmentée pour anticiper davantage
+                const stepSize = 3;                 // Pas encore plus petit pour des mouvements plus graduels
+                
+                // Vecteur d'attraction vers la cible (champ attractif)
+                let targetDx = targetX - drone.x;
+                let targetDy = targetY - drone.y;
+                const targetDist = Math.sqrt(targetDx * targetDx + targetDy * targetDy);
+                
+                // Normaliser le vecteur d'attraction
+                if (targetDist > 0) {
+                    targetDx = (targetDx / targetDist) * targetAttraction;
+                    targetDy = (targetDy / targetDist) * targetAttraction;
+                }
+                
+                // Calculer les forces de répulsion de tous les obstacles (champ répulsif)
+                let repulsionX = 0;
+                let repulsionY = 0;
+                
+                for (const obstacle of obstacles) {
+                    // Vecteur entre obstacle et drone
+                    const obstacleDx = drone.x - obstacle.x;
+                    const obstacleDy = drone.y - obstacle.y;
+                    
+                    // Distance au centre de l'obstacle + rayon de sécurité substantiellement augmenté
+                    const effectiveObstacleWidth = obstacle.width/2 + 30;
+                    const effectiveObstacleHeight = obstacle.height/2 + 30;
+                    
+                    // Distance effective tenant compte des dimensions
+                    let obstacleDistX = Math.abs(obstacleDx) - effectiveObstacleWidth;
+                    let obstacleDistY = Math.abs(obstacleDy) - effectiveObstacleHeight;
+                    obstacleDistX = obstacleDistX < 0 ? 0 : obstacleDistX;
+                    obstacleDistY = obstacleDistY < 0 ? 0 : obstacleDistY;
+                    
+                    // Distance euclidienne effective
+                    const obstacleDist = Math.sqrt(obstacleDistX * obstacleDistX + obstacleDistY * obstacleDistY);
+                    
+                    // Calculer la force de répulsion inversement proportionnelle à la distance
+                    if (obstacleDist < maxInfluenceDistance) {
+                        // Plus on est proche, plus la répulsion est forte
+                        const repulsionFactor = obstacleRepulsion * (1.0 - obstacleDist / maxInfluenceDistance);
+                        
+                        // Normaliser le vecteur de répulsion
+                        const length = Math.sqrt(obstacleDx * obstacleDx + obstacleDy * obstacleDy);
+                        if (length > 0) {
+                            repulsionX += (obstacleDx / length) * repulsionFactor;
+                            repulsionY += (obstacleDy / length) * repulsionFactor;
+                        }
+                    }
+                }
+                
+                // Combiner les forces d'attraction et de répulsion
+                let resultX = targetDx + repulsionX;
+                let resultY = targetDy + repulsionY;
+                
+                // Normaliser le vecteur résultant
+                const resultLength = Math.sqrt(resultX * resultX + resultY * resultY);
+                if (resultLength > 0) {
+                    resultX = (resultX / resultLength) * stepSize;
+                    resultY = (resultY / resultLength) * stepSize;
+                }
+                
+                // Calculer la nouvelle position
+                const newX = drone.x + resultX;
+                const newY = drone.y + resultY;
+                
+                // Vérifier si la nouvelle position est valide
+                if (!checkCollision(drone, newX, newY)) {
+                    return { x: newX, y: newY };
+                }
+                
+                // Si la position calculée n'est pas valide, utiliser des stratégies avancées d'évitement
+                // Mémoriser le dernier sens de contournement pour assurer la cohérence et un mouvement fluide
+                if (!drone.avoidanceSide) {
+                    // Déterminer de quel côté contourner l'obstacle avec une logique améliorée
+                    // Analyse basée sur la position relative du drone, de l'obstacle et de la cible
+                    const obstacles = findNearestObstacle(drone.x, drone.y);
+                    if (obstacles && targetX !== undefined) {
+                        // Déterminer le meilleur côté pour contourner en fonction de la géométrie
+                        const vectorToDest = {x: targetX - drone.x, y: targetY - drone.y};
+                        const vectorToObstacle = {x: obstacles.x - drone.x, y: obstacles.y - drone.y};
+                        // Produit vectoriel pour déterminer le côté
+                        const crossProduct = vectorToDest.x * vectorToObstacle.y - vectorToDest.y * vectorToObstacle.x;
+                        drone.avoidanceSide = crossProduct > 0 ? 'right' : 'left';
+                    } else {
+                        drone.avoidanceSide = Math.random() > 0.5 ? 'left' : 'right';
+                    }
+                }
+                
+                // Fonction pour trouver l'obstacle le plus proche
+                function findNearestObstacle(x, y) {
+                    let closest = null;
+                    let minDist = Infinity;
+                    
+                    for (const obstacle of obstacles) {
+                        const dx = obstacle.x - x;
+                        const dy = obstacle.y - y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closest = obstacle;
+                        }
+                    }
+                    
+                    return closest;
+                }
+                
+                // Angles de contournement plus progressifs pour un mouvement plus fluide
+                const sideMultiplier = drone.avoidanceSide === 'left' ? 1 : -1;
+                const angles = [15, 30, 45, 60, 75, 90, 120, 150].map(a => a * sideMultiplier);
+                
+                // Essayer différents angles
+                for (const angle of angles) {
+                    const radians = (angle * Math.PI) / 180;
+                    const dx = targetX - drone.x;
+                    const dy = targetY - drone.y;
+                    const currentAngle = Math.atan2(dy, dx);
+                    const newAngle = currentAngle + radians;
+                    
+                    // Tester différentes distances
+                    for (const dist of [10, 15, 20, 25, 30, 35]) {
+                        const testX = drone.x + Math.cos(newAngle) * dist;
+                        const testY = drone.y + Math.sin(newAngle) * dist;
+                        
+                        if (!checkCollision(drone, testX, testY)) {
+                            return { x: testX, y: testY };
+                        }
+                    }
+                }
+                
+                // Essayer l'autre côté si tout échoue
+                drone.avoidanceSide = drone.avoidanceSide === 'left' ? 'right' : 'left';
+                
+                // Dernier recours: petit recul
+                const backupAngle = Math.atan2(targetY - drone.y, targetX - drone.x) + Math.PI;
+                return {
+                    x: drone.x + Math.cos(backupAngle) * 5,
+                    y: drone.y + Math.sin(backupAngle) * 5
+                };
+            }
+            
+            // Update drones position
+            function updateDrones() {
+                const speedFactor = parseInt(speedRange.value) / 100;
+                
+                // First update leader
+                const leader = drones[0];
+                let dx = leader.targetX - leader.x;
+                let dy = leader.targetY - leader.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0.5) {
+                    // Normalize and scale by speed - slow down as approaching destination
+                    const approachFactor = Math.min(1, dist / 50); // Ralentir progressivement à l'approche
+                    dx = dx / dist * 2 * speedFactor * approachFactor;
+                    dy = dy / dist * 2 * speedFactor * approachFactor;
+                    
+                    const newX = leader.x + dx;
+                    const newY = leader.y + dy;
+                    
+                    // Check for collision
+                    if (obstacleToggle.checked && checkCollision(leader, newX, newY)) {
+                        // Find path around obstacle
+                        const newPath = findPathAroundObstacle(leader, leader.targetX, leader.targetY);
+                        // Déplacement progressif et limité pour éviter tout effet de téléportation
+                        const maxMoveDistance = 3; // Limite maximale de déplacement par frame
+                        const moveX = (newPath.x - leader.x) * 0.4; // Coefficient réduit pour mouvement plus graduel
+                        const moveY = (newPath.y - leader.y) * 0.4;
+                        
+                        // Limiter le déplacement maximal
+                        const moveLength = Math.sqrt(moveX * moveX + moveY * moveY);
+                        if (moveLength > maxMoveDistance) {
+                            leader.x += (moveX / moveLength) * maxMoveDistance;
+                            leader.y += (moveY / moveLength) * maxMoveDistance;
+                        } else {
+                            leader.x += moveX;
+                            leader.y += moveY;
+                        }
+                    } else {
+                        leader.x = newX;
+                        leader.y = newY;
+                    }
+                    
+                    // Update element position
+                    leader.element.style.left = `${leader.x}px`;
+                    leader.element.style.top = `${leader.y}px`;
+                    
+                    // Update formation when leader moves
+                    updateFormation();
+                }
+                
+                // Then update followers
+                for (let i = 1; i < drones.length; i++) {
+                    const drone = drones[i];
+                    dx = drone.targetX - drone.x;
+                    dy = drone.targetY - drone.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist > 0.5) {
+                        // Normalize and scale by speed - slow down as approaching destination
+                        const approachFactor = Math.min(1, dist / 40); // Ralentir progressivement à l'approche
+                        dx = dx / dist * 1.8 * speedFactor * approachFactor;
+                        dy = dy / dist * 1.8 * speedFactor * approachFactor;
+                        
+                        const newX = drone.x + dx;
+                        const newY = drone.y + dy;
+                        
+                        // Enhanced collision detection and avoidance
+                        if (obstacleToggle.checked) {
+                            // Check if current path leads to collision
+                            if (checkCollision(drone, newX, newY)) {
+                                // Find path around obstacle
+                                const newPath = findPathAroundObstacle(drone, drone.targetX, drone.targetY);
+                                // Déplacement progressif et limité pour éviter tout effet de téléportation
+                                const maxMoveDistance = 3; // Limite maximale de déplacement par frame
+                                const moveX = (newPath.x - drone.x) * 0.4; // Coefficient réduit pour mouvement plus graduel
+                                const moveY = (newPath.y - drone.y) * 0.4;
+                                
+                                // Limiter le déplacement maximal
+                                const moveLength = Math.sqrt(moveX * moveX + moveY * moveY);
+                                if (moveLength > maxMoveDistance) {
+                                    drone.x += (moveX / moveLength) * maxMoveDistance;
+                                    drone.y += (moveY / moveLength) * maxMoveDistance;
+                                } else {
+                                    drone.x += moveX;
+                                    drone.y += moveY;
+                                }
+                                
+                                // Visual indicator for collision avoidance
+                                drone.element.classList.add('avoiding');
+                                setTimeout(() => drone.element.classList.remove('avoiding'), 500);
+                            } else {
+                                drone.x = newX;
+                                drone.y = newY;
+                            }
+                        } else {
+                            drone.x = newX;
+                            drone.y = newY;
+                        }
+                        
+                        // Sauvegarder la position précédente
+                        drone.lastX = drone.x;
+                        drone.lastY = drone.y;
+                        
+                        // Mettre à jour la position de l'élément
+                        drone.element.style.left = `${drone.x}px`;
+                        drone.element.style.top = `${drone.y}px`;
+                        
+                        // Mettre à jour l'indicateur de direction
+                        updateDirectionIndicator(drone);
+                        
+                        // Visualiser la trajectoire (optionnel)
+                        if (Math.random() < 0.2) { // Limiter le nombre de points pour performance
+                            addPathTrace(drone.x, drone.y);
+                        }
+                    }
+                }
+                
+                // Schedule next update
+                animationFrame = requestAnimationFrame(updateDrones);
+            }
+            
+            // Show alert message
+            function showAlert(message, type) {
+                const alertContainer = document.getElementById('alert-container');
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                alertContainer.appendChild(alert);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 150);
+                }, 3000);
+            }
+            
+            // Mettre à jour l'indicateur de direction du drone
+            function updateDirectionIndicator(drone) {
+                if (drone.directionIndicator) {
+                    const dx = drone.x - drone.lastX;
+                    const dy = drone.y - drone.lastY;
+                    
+                    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+                        const angle = Math.atan2(dy, dx);
+                        const distance = 8;
+                        
+                        // Positionner l'indicateur dans la direction du mouvement
+                        drone.directionIndicator.style.left = `${Math.cos(angle) * distance + 10}px`;
+                        drone.directionIndicator.style.top = `${Math.sin(angle) * distance + 10}px`;
+                    }
+                }
+            }
+            
+            // Ajouter un point de trace pour visualiser la trajectoire
+            function addPathTrace(x, y) {
+                const trace = document.createElement('div');
+                trace.className = 'path-trace';
+                trace.style.left = `${x}px`;
+                trace.style.top = `${y}px`;
+                simulationCanvas.appendChild(trace);
+                
+                // Faire disparaître après quelques secondes
+                setTimeout(() => {
+                    trace.style.opacity = '0';
+                    setTimeout(() => trace.remove(), 1000);
+                }, 3000);
+            }
+            
+            // Set up event listeners
+            simulationCanvas.addEventListener('click', function(event) {
+                const rect = simulationCanvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                setDestination(x, y);
+            });
+            
+            formationButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update active button
+                    formationButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update formation
+                    currentFormation = this.dataset.formation;
+                    updateFormation();
+                    
+                    showAlert(`Formation ${currentFormation} activée`, 'success');
+                });
+            });
+            
+            speedRange.addEventListener('input', function() {
+                speedValue.textContent = `${this.value}%`;
+            });
+            
+            spacingRange.addEventListener('input', function() {
+                spacingValue.textContent = `${this.value}px`;
+                updateFormation();
+            });
+            
+            obstacleToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    createObstacles();
+                } else {
+                    document.querySelectorAll('.obstacle').forEach(el => el.remove());
+                    obstacles = [];
+                }
+                
+                showAlert(`Obstacles ${this.checked ? 'activés' : 'désactivés'}`, 'info');
+            });
+            
+            resetButton.addEventListener('click', function() {
+                // Cancel animation
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                }
+                
+                initializeSimulation();
+                animationFrame = requestAnimationFrame(updateDrones);
+                
+                showAlert('Simulation réinitialisée', 'success');
+            });
+            
+            algorithmSelect.addEventListener('change', function() {
+                algorithmType = this.value;
+                algorithmDisplay.textContent = this.value === 'rrt' ? 'RRT*' : 'A*';
+                showAlert(`Algorithme changé pour ${algorithmDisplay.textContent}`, 'info');
+            });
+            
+            // Initialize the simulation
+            initializeSimulation();
+            
+            // Start animation loop
+            animationFrame = requestAnimationFrame(updateDrones);
+            
+            // Show initial help message
+            showAlert('Cliquez sur le terrain pour définir une destination', 'info');
+        });
+    </script>
+</body>
+</html>

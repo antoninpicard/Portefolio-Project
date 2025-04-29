@@ -1,0 +1,269 @@
+.threats-page {
+  padding: 20px;
+}
+
+.threats-page h1 {
+  margin-bottom: 20px;
+  color: var(--primary-color);
+}
+
+.threats-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  margin-left: 15px;
+}
+
+.filter-icon {
+  margin-right: 8px;
+  color: #666;
+}
+
+.filter-select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.threats-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 15px;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.summary-icon.high {
+  background-color: #e74c3c;
+}
+
+.summary-icon.medium {
+  background-color: #f39c12;
+}
+
+.summary-icon.low {
+  background-color: #2ecc71;
+}
+
+.summary-icon.resolved {
+  background-color: #3498db;
+}
+
+.summary-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 1rem;
+  color: var(--primary-color);
+}
+
+.summary-info p {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.threats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.threat-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  position: relative;
+}
+
+.threat-active {
+  border-left: 4px solid #e74c3c;
+}
+
+.threat-resolved {
+  border-left: 4px solid #3498db;
+  opacity: 0.8;
+}
+
+.threat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.threat-type {
+  display: flex;
+  align-items: center;
+}
+
+.threat-icon {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+.threat-icon.status-danger {
+  color: #e74c3c;
+}
+
+.threat-icon.status-warning {
+  color: #f39c12;
+}
+
+.threat-icon.status-safe {
+  color: #2ecc71;
+}
+
+.threat-type h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.threat-details {
+  margin-bottom: 15px;
+}
+
+.threat-description {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.threat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.threat-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-resolve, .btn-block {
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-resolve {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-resolve:hover {
+  background-color: #2980b9;
+}
+
+.btn-block {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-block:hover {
+  background-color: #c0392b;
+}
+
+.resolved-status {
+  display: flex;
+  align-items: center;
+  color: #3498db;
+  font-weight: 600;
+}
+
+.resolved-status svg {
+  margin-right: 5px;
+}
+
+.no-threats {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .threats-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-container {
+    max-width: 100%;
+    margin-bottom: 15px;
+  }
+  
+  .filter-container {
+    margin-left: 0;
+  }
+  
+  .summary-item {
+    min-width: 100%;
+  }
+}

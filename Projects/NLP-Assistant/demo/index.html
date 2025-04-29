@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NLP Assistant - Démo Interactive</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #6200ea;
+            --secondary-color: #00bfa5;
+            --dark-color: #212121;
+            --light-color: #f5f5f5;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--dark-color);
+            background-color: var(--light-color);
+            padding-top: 56px;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+        }
+        
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message {
+            max-width: 80%;
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 20px;
+            position: relative;
+            clear: both;
+        }
+        
+        .user-message {
+            background-color: #e0e0e0;
+            float: right;
+            border-top-right-radius: 5px;
+        }
+        
+        .assistant-message {
+            background-color: var(--primary-color);
+            color: white;
+            float: left;
+            border-top-left-radius: 5px;
+        }
+        
+        .voice-indicator {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .voice-indicator i {
+            color: white;
+            font-size: 2rem;
+        }
+        
+        .voice-indicator.listening {
+            background-color: var(--secondary-color);
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .visualizer {
+            height: 60px;
+            width: 100%;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .visualizer-bar {
+            width: 5px;
+            height: 5px;
+            margin: 0 2px;
+            background-color: var(--primary-color);
+            border-radius: 5px;
+            transition: height 0.1s ease;
+        }
+        
+        .suggestions {
+            margin-top: 1rem;
+        }
+        
+        .suggestion-chip {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            background-color: #f0f0f0;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .suggestion-chip:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .privacy-indicator {
+            background-color: rgba(0, 191, 165, 0.1);
+            border-left: 4px solid var(--secondary-color);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 1rem;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #b0b0b0;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 3px;
+            animation: typing 1.3s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 100% {
+                transform: translateY(0);
+                background-color: #b0b0b0;
+            }
+            50% {
+                transform: translateY(-5px);
+                background-color: var(--primary-color);
+            }
+        }
+        
+        .settings-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .alert-banner {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="../../../index.html">
+                <i class="bi bi-mic-fill"></i> NLP Assistant Demo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../../../index.html">Retour à la page principale</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title text-center mb-4">Démonstration de l'Assistant NLP</h2>
+                        
+                        <div class="alert alert-info">
+                            <h5>Comment utiliser cette démo :</h5>
+                            <p>Cette démo simule l'interaction avec l'assistant vocal NLP. Vous pouvez :</p>
+                            <ol>
+                                <li>Cliquer sur le bouton du microphone pour "parler" à l'assistant</li>
+                                <li>Sélectionner une des suggestions prédéfinies</li>
+                                <li>Modifier les paramètres pour personnaliser l'expérience</li>
+                            </ol>
+                            <p><small>Note : Cette démo n'utilise pas de véritable reconnaissance vocale. Elle simule simplement l'expérience utilisateur.</small></p>
+                        </div>
+                        
+                        <div class="privacy-indicator">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-shield-lock-fill text-success me-2"></i>
+                                <strong>Mode hors ligne :</strong>
+                            </div>
+                            <p class="mb-0 mt-1">Toutes les interactions sont traitées localement. Aucune donnée n'est envoyée à des serveurs externes.</p>
+                        </div>
+                        
+                        <!-- Chat interface -->
+                        <div class="chat-container mt-4" id="chat-container">
+                            <div class="message assistant-message">
+                                Bonjour ! Je suis votre assistant vocal hors ligne. Comment puis-je vous aider aujourd'hui ?
+                            </div>
+                        </div>
+                        
+                        <!-- Voice visualizer -->
+                        <div class="visualizer" id="voice-visualizer">
+                            <!-- Bars will be added by JavaScript -->
+                        </div>
+                        
+                        <!-- Voice input button -->
+                        <div class="text-center my-4">
+                            <div class="voice-indicator" id="voice-button">
+                                <i class="bi bi-mic-fill"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Suggestions -->
+                        <div class="suggestions">
+                            <p class="mb-2">Suggestions :</p>
+                            <div class="suggestion-chip" data-query="Quelle est la météo aujourd'hui ?">Quelle est la météo aujourd'hui ?</div>
+                            <div class="suggestion-chip" data-query="Ajoute un rappel pour demain à 10h">Ajoute un rappel pour demain à 10h</div>
+                            <div class="suggestion-chip" data-query="Allume les lumières du salon">Allume les lumières du salon</div>
+                            <div class="suggestion-chip" data-query="Raconte-moi une blague">Raconte-moi une blague</div>
+                            <div class="suggestion-chip" data-query="Qu'est-ce que tu peux faire ?">Qu'est-ce que tu peux faire ?</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Paramètres</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="settings-option">
+                            <div>
+                                <h6 class="mb-0">Retour vocal</h6>
+                                <p class="text-muted mb-0 small">L'assistant répond avec une voix synthétisée</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="voice-feedback-toggle" checked>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <h6 class="mb-0">Écoute automatique</h6>
+                                <p class="text-muted mb-0 small">Activer l'écoute automatique après chaque réponse</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="auto-listen-toggle">
+                            </div>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <h6 class="mb-0">Mode sombre</h6>
+                                <p class="text-muted mb-0 small">Activer l'interface en mode sombre</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dark-mode-toggle">
+                            </div>
+                        </div>
+                        
+                        <div class="settings-option">
+                            <div>
+                                <h6 class="mb-0">Type de voix</h6>
+                                <p class="text-muted mb-0 small">Choisir le type de voix de l'assistant</p>
+                            </div>
+                            <select class="form-select" id="voice-type-select" style="width: 150px;">
+                                <option value="femme">Voix de femme (français)</option>
+                                <option value="homme">Voix d'homme (français)</option>
+                                <option value="neutre">Voix neutre (français)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- About card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">À propos de cette démo</h5>
+                        <p>Cette démonstration vous donne un aperçu des capacités de l'assistant NLP. Dans la version complète, vous pourrez :</p>
+                        <ul>
+                            <li>Utiliser une véritable reconnaissance vocale hors ligne</li>
+                            <li>Contrôler vos appareils domotiques</li>
+                            <li>Gérer votre calendrier et vos rappels</li>
+                            <li>Poser des questions sur des informations locales</li>
+                            <li>Personnaliser l'assistant selon vos besoins</li>
+                        </ul>
+                        <div class="text-center">
+                            <a href="../../../index.html" class="btn btn-outline-primary">En savoir plus</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="alert-banner" id="alert-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fix potential Firefox issues and preload voices
+            if (typeof window.speechSynthesis !== 'undefined') {
+                // Force Firefox to précharger les voix
+                setTimeout(() => {
+                    window.speechSynthesis.getVoices();
+                }, 100);
+                
+                // Événement de chargement des voix
+                window.speechSynthesis.onvoiceschanged = function() {
+                    const voices = window.speechSynthesis.getVoices();
+                    // Filtre pour trouver les voix françaises disponibles
+                    const frenchVoices = voices.filter(voice => 
+                        voice.lang && voice.lang.startsWith('fr'));
+                    
+                    console.log('Toutes les voix chargées:', voices.length);
+                    console.log('Voix françaises disponibles:', frenchVoices.length);
+                    
+                    // Si des voix françaises sont disponibles, on les affiche
+                    if (frenchVoices.length > 0) {
+                        frenchVoices.forEach(voice => {
+                            console.log(`Voix française: ${voice.name} (${voice.lang})`);
+                        });
+                    }
+                };
+            }
+            // DOM elements
+            const chatContainer = document.getElementById('chat-container');
+            const voiceButton = document.getElementById('voice-button');
+            const visualizer = document.getElementById('voice-visualizer');
+            const suggestionChips = document.querySelectorAll('.suggestion-chip');
+            const voiceFeedbackToggle = document.getElementById('voice-feedback-toggle');
+            const autoListenToggle = document.getElementById('auto-listen-toggle');
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const voiceTypeSelect = document.getElementById('voice-type-select');
+            
+            // State variables
+            let isListening = false;
+            let visualizerBars = [];
+            let visualizerInterval = null;
+            let typingTimeout = null;
+            
+            // Messages d'erreur pour la gestion des problèmes
+            const errorMessages = {
+                generalError: "Désolé, une erreur s'est produite lors du traitement de votre demande.",
+                speechError: "Impossible d'utiliser la synthèse vocale. Vérifiez vos paramètres audio.",
+                recognitionError: "Impossible de comprendre. Pourriez-vous reformuler?"
+            };
+            
+            // Responses for common queries (simplified for demo)
+            const responses = {
+                "quelle est la météo aujourd'hui": "D'après les données locales, il fait actuellement 22°C avec un ciel partiellement nuageux. Il y a 10% de chance de pluie aujourd'hui.",
+                "ajoute un rappel pour demain à 10h": "D'accord, j'ai ajouté un rappel pour demain à 10h. Voulez-vous lui donner un titre ?",
+                "allume les lumières du salon": "J'ai allumé les lumières du salon. Elles sont maintenant réglées à 70% de luminosité.",
+                "raconte-moi une blague": "Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ? Parce que sinon ils tomberaient dans le bateau !",
+                "qu'est-ce que tu peux faire": "Je peux vous aider avec de nombreuses tâches comme la météo, les rappels, contrôler vos appareils domestiques, répondre à vos questions, raconter des blagues, et bien plus encore. Tout cela sans envoyer vos données à des serveurs externes."
+            };
+            
+            // Initialize visualizer
+            function initializeVisualizer() {
+                // Create bars for visualizer
+                for (let i = 0; i < 20; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'visualizer-bar';
+                    visualizer.appendChild(bar);
+                    visualizerBars.push(bar);
+                }
+            }
+            
+            // Animate visualizer when listening
+            function animateVisualizer(active) {
+                if (active) {
+                    // Start animation
+                    visualizerInterval = setInterval(() => {
+                        visualizerBars.forEach(bar => {
+                            const height = Math.floor(Math.random() * 40) + 5;
+                            bar.style.height = `${height}px`;
+                        });
+                    }, 100);
+                } else {
+                    // Stop animation
+                    clearInterval(visualizerInterval);
+                    visualizerBars.forEach(bar => {
+                        bar.style.height = '5px';
+                    });
+                }
+            }
+            
+            // Check if Web Speech API is available
+            function checkSpeechSupport() {
+                let supported = false;
+                let message = '';
+                
+                if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                    message = 'La reconnaissance vocale n\'est pas supportée par votre navigateur.';
+                } else if (!('speechSynthesis' in window)) {
+                    message = 'La synthèse vocale n\'est pas supportée par votre navigateur.';
+                } else {
+                    supported = true;
+                }
+                
+                if (!supported) {
+                    showAlert(message + ' La démo fonctionne toujours en mode texte.', 'warning');
+                }
+                
+                return supported;
+            }
+            
+            // Variable pour stocker l'instance de reconnaissance vocale
+            let recognition = null;
+            
+            // Initialiser la reconnaissance vocale
+            function initSpeechRecognition() {
+                try {
+                    // Utiliser l'API standard ou le préfixe webkit
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognition = new SpeechRecognition();
+                    
+                    // Configuration pour le français
+                    recognition.lang = 'fr-FR';
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.maxAlternatives = 1;
+                    
+                    // Gérer les résultats
+                    recognition.onresult = function(event) {
+                        const transcript = event.results[0][0].transcript;
+                        showAlert('Vous avez dit: ' + transcript, 'info');
+                        processQuery(transcript);
+                    };
+                    
+                    // Gérer les erreurs
+                    recognition.onerror = function(event) {
+                        console.error('Erreur de reconnaissance vocale:', event.error);
+                        showAlert('Erreur de reconnaissance vocale: ' + event.error, 'danger');
+                        toggleListening();
+                    };
+                    
+                    // Fin de la reconnaissance
+                    recognition.onend = function() {
+                        isListening = false;
+                        voiceButton.classList.remove('listening');
+                        animateVisualizer(false);
+                    };
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Erreur d\'initialisation de la reconnaissance vocale:', error);
+                    showAlert('La reconnaissance vocale n\'est pas disponible sur ce navigateur.', 'warning');
+                    return false;
+                }
+            }
+            
+            // Toggle listening state with real speech recognition
+            function toggleListening() {
+                // Initialiser la reconnaissance vocale si ce n'est pas déjà fait
+                if (!recognition && !initSpeechRecognition()) {
+                    // Si l'initialisation échoue, on utilise le comportement de démo
+                    isListening = !isListening;
+                    
+                    if (isListening) {
+                        voiceButton.classList.add('listening');
+                        animateVisualizer(true);
+                        showAlert('Mode démo: Écoute simulée...', 'info');
+                        
+                        setTimeout(() => {
+                            if (isListening) {
+                                toggleListening();
+                                processRandomQuery();
+                            }
+                        }, 5000);
+                    } else {
+                        voiceButton.classList.remove('listening');
+                        animateVisualizer(false);
+                    }
+                    return;
+                }
+                
+                // Gestion de la reconnaissance vocale réelle
+                isListening = !isListening;
+                
+                if (isListening) {
+                    // Démarrer la reconnaissance
+                    voiceButton.classList.add('listening');
+                    animateVisualizer(true);
+                    showAlert('Parlez maintenant...', 'info');
+                    try {
+                        recognition.start();
+                    } catch (error) {
+                        console.error('Erreur au démarrage de la reconnaissance:', error);
+                        isListening = false;
+                        voiceButton.classList.remove('listening');
+                        animateVisualizer(false);
+                        showAlert('Erreur au démarrage de la reconnaissance vocale.', 'danger');
+                    }
+                } else {
+                    // Arrêter la reconnaissance
+                    try {
+                        recognition.stop();
+                    } catch (error) {
+                        console.error('Erreur à l\'arrêt de la reconnaissance:', error);
+                    } finally {
+                        voiceButton.classList.remove('listening');
+                        animateVisualizer(false);  
+                    }
+                }
+            }
+            
+            // Process a query with error handling
+            function processQuery(query) {
+                if (!query || query.trim() === '') {
+                    showAlert('Veuillez entrer une requête valide', 'warning');
+                    return;
+                }
+                
+                // Add user message
+                addMessage(query, 'user');
+                
+                // Show typing indicator
+                showTypingIndicator();
+                
+                // Process response after a delay (simulating processing time)
+                setTimeout(() => {
+                    // Hide typing indicator
+                    hideTypingIndicator();
+                    
+                    // Get response
+                    let response;
+                    const normalizedQuery = query.toLowerCase();
+                    
+                    // Check for exact match first
+                    for (const key in responses) {
+                        if (normalizedQuery.includes(key)) {
+                            response = responses[key];
+                            break;
+                        }
+                    }
+                    
+                    // Default response if no match
+                    if (!response) {
+                        response = "Je comprends votre demande, mais je ne peux pas y répondre dans cette démonstration. Dans la version complète, je serais capable de traiter cette requête.";
+                    }
+                    
+                    // Add assistant response
+                    addMessage(response, 'assistant');
+                    
+                    // Speak response if enabled
+                    if (voiceFeedbackToggle.checked) {
+                        speakText(response);
+                    }
+                    
+                    // Auto-listen if enabled
+                    if (autoListenToggle.checked) {
+                        setTimeout(() => {
+                            toggleListening();
+                        }, 1000);
+                    }
+                }, 1500);
+            }
+            
+            // Select a random query for demo purposes
+            function processRandomQuery() {
+                const suggestions = Array.from(suggestionChips);
+                const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+                processQuery(randomSuggestion.dataset.query);
+            }
+            
+            // Add a message to the chat
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                messageDiv.textContent = text;
+                
+                chatContainer.appendChild(messageDiv);
+                
+                // Auto scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Show typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'message assistant-message typing-container';
+                typingDiv.innerHTML = 'Assistant <div class="typing-indicator"><span></span><span></span><span></span></div>';
+                typingDiv.id = 'typing-indicator';
+                
+                chatContainer.appendChild(typingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // Hide typing indicator
+            function hideTypingIndicator() {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            
+            // Fonction pour vérifier si une voix est française
+            function isFrenchVoice(voice) {
+                if (!voice || !voice.lang) return false;
+                return voice.lang.startsWith('fr') || 
+                       voice.name.toLowerCase().includes('français') ||
+                       voice.name.toLowerCase().includes('french');
+            }
+            
+            // Obtenir les voix disponibles avec priorité pour les voix françaises
+            function getFrenchVoice(voiceType) {
+                try {
+                    const voices = window.speechSynthesis.getVoices();
+                    
+                    // Filtrer d'abord les voix françaises
+                    const frenchVoices = voices.filter(isFrenchVoice);
+                    
+                    if (frenchVoices.length > 0) {
+                        // Chercher une voix française selon le type demandé
+                        let targetVoice = null;
+                        
+                        if (voiceType === 'femme') {
+                            targetVoice = frenchVoices.find(voice => 
+                                voice.name.toLowerCase().includes('female') || 
+                                voice.name.toLowerCase().includes('femme') || 
+                                voice.name.toLowerCase().includes('amélie') ||
+                                voice.name.toLowerCase().includes('elise'));
+                        } else if (voiceType === 'homme') {
+                            targetVoice = frenchVoices.find(voice => 
+                                voice.name.toLowerCase().includes('male') || 
+                                voice.name.toLowerCase().includes('homme') ||
+                                voice.name.toLowerCase().includes('thomas') ||
+                                voice.name.toLowerCase().includes('nicolas'));
+                        }
+                        
+                        // Si on trouve une voix correspondante, on la retourne
+                        if (targetVoice) return targetVoice;
+                        
+                        // Sinon, on prend la première voix française disponible
+                        return frenchVoices[0];
+                    }
+                    
+                    // Si aucune voix française n'est disponible, chercher dans toutes les voix
+                    console.warn('Aucune voix française trouvée, utilisation de la voix par défaut');
+                    return voices.length > 0 ? voices[0] : null;
+                } catch (error) {
+                    console.error('Erreur lors de la récupération des voix:', error);
+                    return null;
+                }
+            }
+            
+            // Synthèse vocale améliorée avec voix française
+            function speakText(text) {
+                try {
+                    // Vérifier si la synthèse vocale est disponible
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        
+                        // Configuration spécifique pour le français
+                        utterance.lang = 'fr-FR';
+                        utterance.rate = 1.0;  // Vitesse normale
+                        utterance.pitch = 1.0; // Hauteur normale
+                        
+                        // Récupérer une voix française selon le type sélectionné
+                        const voiceType = voiceTypeSelect.value;
+                        const selectedVoice = getFrenchVoice(voiceType);
+                        
+                        if (selectedVoice) {
+                            utterance.voice = selectedVoice;
+                            console.log('Voix sélectionnée:', selectedVoice.name, selectedVoice.lang);
+                        } else {
+                            console.warn('Aucune voix disponible, utilisation de la voix par défaut du système');
+                        }
+                        
+                        // Démarrer la lecture
+                        window.speechSynthesis.cancel(); // Arrêter toute lecture en cours
+                        window.speechSynthesis.speak(utterance);
+                        showAlert('Audio en français en cours de lecture', 'success');
+                    } else {
+                        // Fallback si l'API n'est pas disponible
+                        showAlert('Synthèse vocale (simulation) : "' + text.substring(0, 50) + '..."', 'info');
+                    }
+                } catch (error) {
+                    console.error('Erreur de synthèse vocale:', error);
+                    showAlert(errorMessages.speechError, 'warning');
+                }
+            }
+            
+            // Toggle dark mode
+            function toggleDarkMode() {
+                if (darkModeToggle.checked) {
+                    document.body.style.backgroundColor = '#121212';
+                    document.body.style.color = '#f5f5f5';
+                } else {
+                    document.body.style.backgroundColor = '';
+                    document.body.style.color = '';
+                }
+            }
+            
+            // Show alert message
+            function showAlert(message, type) {
+                const alertContainer = document.getElementById('alert-container');
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                alertContainer.appendChild(alert);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 150);
+                }, 3000);
+            }
+            
+            // Set up event listeners
+            voiceButton.addEventListener('click', toggleListening);
+            
+            suggestionChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    processQuery(this.dataset.query);
+                });
+            });
+            
+            voiceFeedbackToggle.addEventListener('change', function() {
+                showAlert('Retour vocal ' + (this.checked ? 'activé' : 'désactivé'), 'info');
+            });
+            
+            autoListenToggle.addEventListener('change', function() {
+                showAlert('Écoute automatique ' + (this.checked ? 'activée' : 'désactivée'), 'info');
+            });
+            
+            darkModeToggle.addEventListener('change', toggleDarkMode);
+            
+            voiceTypeSelect.addEventListener('change', function() {
+                showAlert(`Type de voix changé : ${this.value}`, 'info');
+            });
+            
+            // Initialize with better error handling
+            try {
+                initializeVisualizer();
+                
+                // Initialiser la reconnaissance vocale au démarrage
+                if (initSpeechRecognition()) {
+                    console.log('Reconnaissance vocale initialisée avec succès');
+                    showAlert('Reconnaissance vocale prête. Cliquez sur le micro pour parler.', 'success');
+                }
+                
+                // Charger les voix et garantir leur disponibilité
+                if (typeof window.speechSynthesis !== 'undefined') {
+                    // Firefox nécessite un délai pour charger les voix
+                    setTimeout(() => {
+                        const voices = window.speechSynthesis.getVoices();
+                        const frenchVoices = voices.filter(voice => isFrenchVoice(voice));
+                        
+                        console.log('Voix disponibles:', voices.length);
+                        console.log('Voix françaises:', frenchVoices.length);
+                        
+                        if (frenchVoices.length > 0) {
+                            console.log('Voix françaises trouvées:', frenchVoices.map(v => v.name));
+                        }
+                        
+                        // Add initial welcome message with speech
+                        if (voiceFeedbackToggle.checked) {
+                            speakText("Bonjour ! Je suis votre assistant vocal hors ligne. Comment puis-je vous aider aujourd'hui ?");
+                        }
+                    }, 1000);
+                }
+                
+                showAlert('Assistant NLP prêt à vous aider en français', 'success');
+                
+            } catch (error) {
+                console.error('Erreur d\'initialisation:', error);
+                showAlert('Erreur lors de l\'initialisation. Veuillez rafraîchir la page.', 'danger');
+            }
+        });
+    </script>
+</body>
+</html>

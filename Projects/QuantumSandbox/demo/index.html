@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantumSandbox - Démo Interactive</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3f51b5;
+            --secondary-color: #f50057;
+            --dark-color: #212121;
+            --light-color: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 56px;
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+        }
+        
+        .circuit-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .circuit-row {
+            display: contents;
+        }
+        
+        .qubit-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            padding: 10px;
+            font-weight: bold;
+        }
+        
+        .circuit-cell {
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 50px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .circuit-cell:hover {
+            background-color: rgba(63, 81, 181, 0.1);
+        }
+        
+        .gate {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .h-gate {
+            background-color: #3f51b5;
+        }
+        
+        .x-gate {
+            background-color: #f44336;
+        }
+        
+        .z-gate {
+            background-color: #009688;
+        }
+        
+        .y-gate {
+            background-color: #ff9800;
+        }
+        
+        .control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #000;
+        }
+        
+        .target {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #000;
+            position: relative;
+        }
+        
+        .target::before, .target::after {
+            content: '';
+            position: absolute;
+            background-color: #000;
+        }
+        
+        .target::before {
+            width: 30px;
+            height: 2px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+        
+        .target::after {
+            width: 2px;
+            height: 30px;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+        
+        .connection {
+            position: absolute;
+            width: 2px;
+            background-color: #000;
+        }
+        
+        .gate-palette {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+        }
+        
+        .result-display {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        
+        #bloch-sphere {
+            width: 100%;
+            height: 250px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .bloch-circle {
+            width: 200px;
+            height: 200px;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .bloch-axes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .bloch-axis {
+            position: absolute;
+            background-color: #999;
+            transform-origin: center;
+        }
+        
+        .bloch-x-axis {
+            width: 200px;
+            height: 1px;
+            top: 50%;
+        }
+        
+        .bloch-y-axis {
+            width: 1px;
+            height: 200px;
+            left: 50%;
+        }
+        
+        .bloch-state {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .bloch-vector {
+            position: absolute;
+            width: 2px;
+            background-color: var(--primary-color);
+            transform-origin: bottom center;
+            bottom: 50%;
+            left: 50%;
+        }
+        
+        .probability-bar {
+            height: 30px;
+            background-color: var(--primary-color);
+            margin-bottom: 5px;
+            transition: width 0.3s ease;
+        }
+        
+        .axis-label {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .alert-banner {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="../../../index.html">
+                <i class="bi bi-box"></i> QuantumSandbox Demo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="../../../index.html">Retour à la page principale</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title text-center mb-4">Simulateur de Circuits Quantiques</h2>
+                        
+                        <div class="alert alert-info">
+                            <h5>Comment utiliser cette démo :</h5>
+                            <ol>
+                                <li>Sélectionnez une porte quantique dans la palette</li>
+                                <li>Cliquez sur une cellule du circuit pour placer la porte</li>
+                                <li>Cliquez sur "Simuler" pour voir les résultats</li>
+                            </ol>
+                        </div>
+                        
+                        <h5 class="mb-3">Palette de portes</h5>
+                        <div class="gate-palette">
+                            <div class="gate h-gate" data-gate="h" draggable="true">H</div>
+                            <div class="gate x-gate" data-gate="x" draggable="true">X</div>
+                            <div class="gate z-gate" data-gate="z" draggable="true">Z</div>
+                            <div class="gate y-gate" data-gate="y" draggable="true">Y</div>
+                            <button class="btn btn-outline-danger btn-sm" id="clear-gate">Effacer porte</button>
+                        </div>
+                        
+                        <h5 class="mb-3">Circuit quantique</h5>
+                        <div class="circuit-grid" id="quantum-circuit">
+                            <!-- Circuit will be generated by JavaScript -->
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <button class="btn btn-primary" id="simulate-btn">Simuler</button>
+                            <button class="btn btn-outline-secondary ms-2" id="reset-btn">Réinitialiser</button>
+                        </div>
+                        
+                        <h5 class="mb-3">Résultats de la simulation</h5>
+                        <div class="result-display">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Probabilités des états</h6>
+                                    <div id="probabilities">
+                                        <p class="text-muted">Exécutez la simulation pour voir les résultats</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Sphère de Bloch (qubit 0)</h6>
+                                    <div id="bloch-sphere">
+                                        <div class="bloch-circle">
+                                            <div class="bloch-axes">
+                                                <div class="bloch-axis bloch-x-axis"></div>
+                                                <div class="bloch-axis bloch-y-axis"></div>
+                                                <div class="axis-label" style="top: 50%; right: 5px;">X</div>
+                                                <div class="axis-label" style="left: 50%; top: 5px;">Y</div>
+                                            </div>
+                                            <div class="bloch-state" style="top: 50%; left: 50%;"></div>
+                                            <div class="bloch-vector" style="height: 0px; transform: rotate(0deg) translateX(-50%);"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">À propos de cette démo</h5>
+                        <p>Cette démonstration simple vous permet de construire et simuler des circuits quantiques de base. Dans la version complète de QuantumSandbox, vous pouvez :</p>
+                        <ul>
+                            <li>Utiliser plus de qubits et un ensemble complet de portes quantiques</li>
+                            <li>Visualiser les états quantiques de plusieurs façons</li>
+                            <li>Charger et modifier des algorithmes quantiques préconçus</li>
+                            <li>Exporter vos circuits en code Qiskit Python</li>
+                            <li>Suivre des tutoriels interactifs sur l'informatique quantique</li>
+                        </ul>
+                        <div class="text-center">
+                            <a href="../../../index.html" class="btn btn-outline-primary">En savoir plus</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-banner" id="alert-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Circuit configuration
+            const numQubits = 3;
+            const numSteps = 7;
+            
+            // Circuit state
+            let circuit = Array(numQubits).fill().map(() => Array(numSteps).fill(null));
+            let selectedGate = null;
+            
+            // Initialize the circuit grid
+            function initializeCircuit() {
+                const circuitContainer = document.getElementById('quantum-circuit');
+                circuitContainer.innerHTML = '';
+                
+                // Create qubit rows
+                for (let i = 0; i < numQubits; i++) {
+                    // Qubit label
+                    const qubitLabel = document.createElement('div');
+                    qubitLabel.className = 'qubit-label';
+                    qubitLabel.textContent = `q${i}`;
+                    circuitContainer.appendChild(qubitLabel);
+                    
+                    // Gate cells
+                    for (let j = 0; j < numSteps; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'circuit-cell';
+                        cell.dataset.qubit = i;
+                        cell.dataset.step = j;
+                        cell.addEventListener('click', handleCellClick);
+                        circuitContainer.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Handle click on circuit cell
+            function handleCellClick(event) {
+                const qubit = parseInt(event.target.dataset.qubit);
+                const step = parseInt(event.target.dataset.step);
+                
+                if (selectedGate === 'clear') {
+                    // Clear gate
+                    event.target.innerHTML = '';
+                    circuit[qubit][step] = null;
+                } else if (selectedGate) {
+                    // Place gate
+                    const gate = document.createElement('div');
+                    gate.className = `gate ${selectedGate}-gate`;
+                    gate.textContent = selectedGate.toUpperCase();
+                    
+                    // Clear existing content
+                    event.target.innerHTML = '';
+                    event.target.appendChild(gate);
+                    
+                    // Update circuit data
+                    circuit[qubit][step] = selectedGate;
+                }
+            }
+            
+            // Simulate the quantum circuit
+            function simulateCircuit() {
+                showAlert('Simulation en cours...', 'info');
+                
+                // For this demo, we'll use a simplified simulation model
+                // In a real quantum simulator, we would calculate the actual quantum state
+                
+                // Initial state: all qubits in |0⟩
+                let state = [1, 0, 0, 0, 0, 0, 0, 0];
+                
+                // Apply gates
+                for (let step = 0; step < numSteps; step++) {
+                    for (let qubit = 0; qubit < numQubits; qubit++) {
+                        const gate = circuit[qubit][step];
+                        if (gate) {
+                            state = applyGate(state, gate, qubit);
+                        }
+                    }
+                }
+                
+                // Display results
+                displayResults(state);
+                showAlert('Simulation terminée !', 'success');
+            }
+            
+            // Apply a gate to the state
+            function applyGate(state, gate, qubit) {
+                const newState = [...state];
+                const numStates = Math.pow(2, numQubits);
+                
+                // Simplified gate operations
+                if (gate === 'x') {
+                    // NOT gate (bit flip)
+                    for (let i = 0; i < numStates; i++) {
+                        const bitValue = (i >> qubit) & 1;
+                        if (bitValue === 0) {
+                            // Flip 0 to 1
+                            const targetIdx = i | (1 << qubit);
+                            [newState[i], newState[targetIdx]] = [newState[targetIdx], newState[i]];
+                        }
+                    }
+                } else if (gate === 'h') {
+                    // Hadamard gate (simplified) - creates superposition
+                    for (let i = 0; i < numStates; i++) {
+                        const bitValue = (i >> qubit) & 1;
+                        const targetIdx = i ^ (1 << qubit); // Flip the bit at qubit position
+                        
+                        if (bitValue === 0) {
+                            // For |0⟩ states, create superposition
+                            const val0 = newState[i];
+                            const val1 = newState[targetIdx];
+                            newState[i] = (val0 + val1) / Math.sqrt(2);
+                            newState[targetIdx] = (val0 - val1) / Math.sqrt(2);
+                        }
+                    }
+                } else if (gate === 'z') {
+                    // Z gate - phase flip
+                    for (let i = 0; i < numStates; i++) {
+                        const bitValue = (i >> qubit) & 1;
+                        if (bitValue === 1) {
+                            newState[i] = -newState[i]; // Flip phase for |1⟩
+                        }
+                    }
+                } else if (gate === 'y') {
+                    // Y gate (simplified)
+                    for (let i = 0; i < numStates; i++) {
+                        const bitValue = (i >> qubit) & 1;
+                        if (bitValue === 0) {
+                            // Similar to X but with phase change
+                            const targetIdx = i | (1 << qubit);
+                            [newState[i], newState[targetIdx]] = [newState[targetIdx], -newState[i]];
+                        }
+                    }
+                }
+                
+                return newState;
+            }
+            
+            // Display the simulation results
+            function displayResults(state) {
+                const probContainer = document.getElementById('probabilities');
+                probContainer.innerHTML = '';
+                
+                // Calculate probabilities (|amplitude|²)
+                const probs = state.map(amplitude => Math.pow(Math.abs(amplitude), 2));
+                
+                // Display each state's probability
+                for (let i = 0; i < probs.length; i++) {
+                    const probability = probs[i] * 100;
+                    if (probability > 0.01) { // Only show non-zero probabilities
+                        const binaryState = i.toString(2).padStart(numQubits, '0');
+                        
+                        const stateDiv = document.createElement('div');
+                        stateDiv.className = 'mb-2';
+                        
+                        const stateLabel = document.createElement('div');
+                        stateLabel.className = 'd-flex justify-content-between';
+                        stateLabel.innerHTML = `
+                            <span>|${binaryState}⟩</span>
+                            <span>${probability.toFixed(1)}%</span>
+                        `;
+                        
+                        const probBar = document.createElement('div');
+                        probBar.className = 'probability-bar';
+                        probBar.style.width = `${probability}%`;
+                        
+                        stateDiv.appendChild(stateLabel);
+                        stateDiv.appendChild(probBar);
+                        probContainer.appendChild(stateDiv);
+                    }
+                }
+                
+                // Update Bloch sphere for qubit 0
+                updateBlochSphere(state);
+            }
+            
+            // Update the Bloch sphere visualization
+            function updateBlochSphere(state) {
+                // Simplified Bloch sphere calculation for qubit 0
+                // In a real quantum simulator, this would involve density matrix calculations
+                
+                // Estimate Bloch sphere coordinates (very simplified)
+                let x = 0, y = 0, z = 0;
+                
+                // Check if we have a superposition
+                const hasHadamard = circuit[0].some(gate => gate === 'h');
+                const hasX = circuit[0].some(gate => gate === 'x');
+                const hasY = circuit[0].some(gate => gate === 'y');
+                const hasZ = circuit[0].some(gate => gate === 'z');
+                
+                if (hasHadamard && !hasX && !hasY && !hasZ) {
+                    // |+⟩ state
+                    x = 1; y = 0; z = 0;
+                } else if (hasHadamard && hasZ) {
+                    // |−⟩ state
+                    x = -1; y = 0; z = 0;
+                } else if (hasY && !hasX && !hasZ) {
+                    // |i⟩ state
+                    x = 0; y = 1; z = 0;
+                } else if (hasX && !hasY && !hasZ) {
+                    // |1⟩ state
+                    x = 0; y = 0; z = -1;
+                } else if (!hasX && !hasY && !hasZ && !hasHadamard) {
+                    // |0⟩ state
+                    x = 0; y = 0; z = 1;
+                } else {
+                    // Mixed state - simplified approximation
+                    x = hasHadamard ? 0.7 : 0;
+                    y = hasY ? 0.7 : 0;
+                    z = hasX ? -0.7 : 0.7;
+                }
+                
+                // Normalize vector
+                const norm = Math.sqrt(x*x + y*y + z*z);
+                if (norm > 0) {
+                    x /= norm;
+                    y /= norm;
+                    z /= norm;
+                }
+                
+                // Update Bloch sphere visualization
+                const blochState = document.querySelector('.bloch-state');
+                const blochVector = document.querySelector('.bloch-vector');
+                
+                // Position on a 2D projection of the Bloch sphere
+                const radius = 100; // Radius of the Bloch circle
+                const stateX = 50 + x * radius;
+                const stateY = 50 - z * radius; // Y in browser coordinates is inverted
+                
+                blochState.style.left = `${stateX}%`;
+                blochState.style.top = `${stateY}%`;
+                
+                // Update vector
+                const vectorLength = Math.sqrt(Math.pow(stateX - 50, 2) + Math.pow(stateY - 50, 2));
+                const angle = Math.atan2(stateY - 50, stateX - 50) * (180 / Math.PI);
+                
+                blochVector.style.height = `${vectorLength}px`;
+                blochVector.style.transform = `rotate(${angle}deg) translateX(-50%)`;
+            }
+            
+            // Reset the circuit
+            function resetCircuit() {
+                circuit = Array(numQubits).fill().map(() => Array(numSteps).fill(null));
+                
+                // Clear all gates from UI
+                const cells = document.querySelectorAll('.circuit-cell');
+                cells.forEach(cell => {
+                    cell.innerHTML = '';
+                });
+                
+                // Reset results display
+                document.getElementById('probabilities').innerHTML = '<p class="text-muted">Exécutez la simulation pour voir les résultats</p>';
+                
+                // Reset Bloch sphere
+                const blochState = document.querySelector('.bloch-state');
+                const blochVector = document.querySelector('.bloch-vector');
+                blochState.style.top = '50%';
+                blochState.style.left = '50%';
+                blochVector.style.height = '0px';
+                blochVector.style.transform = 'rotate(0deg) translateX(-50%)';
+                
+                showAlert('Circuit réinitialisé', 'info');
+            }
+            
+            // Show alert message
+            function showAlert(message, type) {
+                const alertContainer = document.getElementById('alert-container');
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                alertContainer.appendChild(alert);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(() => {
+                    alert.classList.remove('show');
+                    setTimeout(() => alert.remove(), 150);
+                }, 3000);
+            }
+            
+            // Set up event listeners
+            document.querySelectorAll('.gate-palette .gate').forEach(gate => {
+                gate.addEventListener('click', function() {
+                    selectedGate = this.dataset.gate;
+                    
+                    // Update UI to show selected gate
+                    document.querySelectorAll('.gate-palette .gate').forEach(g => {
+                        g.style.boxShadow = 'none';
+                    });
+                    this.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.3)';
+                    
+                    document.getElementById('clear-gate').style.boxShadow = 'none';
+                });
+            });
+            
+            document.getElementById('clear-gate').addEventListener('click', function() {
+                selectedGate = 'clear';
+                
+                // Update UI to show selected action
+                document.querySelectorAll('.gate-palette .gate').forEach(g => {
+                    g.style.boxShadow = 'none';
+                });
+                this.style.boxShadow = '0 0 0 3px rgba(0,0,0,0.3)';
+            });
+            
+            document.getElementById('simulate-btn').addEventListener('click', simulateCircuit);
+            document.getElementById('reset-btn').addEventListener('click', resetCircuit);
+            
+            // Initialize the circuit
+            initializeCircuit();
+        });
+    </script>
+</body>
+</html>
